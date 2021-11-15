@@ -21,6 +21,64 @@
  * Fonction d'envoi et de réception de messages
  * Il faut un argument : l'identifiant de la socket
  */
+
+
+void encoderCommunication(char* data){ //encode en JSON pour la communication client/serveur
+  char json[5000];
+  char code[24], valeurs[500];
+  char* commande = strtok(data," ");
+  char* newValeurs;
+
+  if(strcmp(commande,"calcul:")){
+    newValeurs = strtok(NULL," ");
+
+    if(!strcmp(commande,"message:")){
+      strcat(code,"message");
+      strcat(valeurs,newValeurs);
+    }
+    else if(!strcmp(commande,"nom:")){
+      strcat(code,"nom");
+      strcat(valeurs,newValeurs);
+    }
+  }
+  else{
+    strcat(code,"calcul");
+    for(int i = 0; i < 3 ; ++i){
+      newValeurs = strtok(NULL," ");
+      if(i<2)
+        strcat(strcat(valeurs,newValeurs),"\", \"");
+      else
+        strcat(valeurs,newValeurs);
+    }
+  }
+
+  strcat(strcpy(json,"{"),"\"code\" : \"");
+  strcat(json,code);
+  strcat(json,"\",\"valeurs\" : [ \"");
+  strcat(json,valeurs);
+  strcat(json,"\" ]}");
+  strcpy(data,json);
+}
+
+void decoderCommunication(char* data){ //decode en JSON pour la communication client/serveur
+  char* code = strtok(data, "\"");
+  char* valeurs;
+  char unparseData[1024];
+  for(int i = 0 ; i < 7 ; ++i){
+    if(i < 3)
+      code = strtok(NULL,"\"");
+    else
+      valeurs = strtok(NULL, "\"");
+  }
+
+  strcat(strcpy(unparseData,code),": ");
+  strcat(unparseData,valeurs);
+  strcpy(data,unparseData);
+}
+
+
+
+
 int envoie_recois_message(int socketfd) {
  
   char data[1024];
@@ -34,6 +92,8 @@ int envoie_recois_message(int socketfd) {
   fgets(message, 1024, stdin);
   strcpy(data, "message: ");
   strcat(data, message);
+
+  encoderCommunication(data);
   
   int write_status = write(socketfd, data, strlen(data));
   if ( write_status < 0 ) {
@@ -44,13 +104,14 @@ int envoie_recois_message(int socketfd) {
   // la réinitialisation de l'ensemble des données
   memset(data, 0, sizeof(data));
 
-
   // lire les données de la socket
   int read_status = read(socketfd, data, sizeof(data));
   if ( read_status < 0 ) {
     perror("erreur lecture");
     return -1;
   }
+
+  decoderCommunication(data);
 
   printf("Message recu: %s\n", data);
  
@@ -98,6 +159,8 @@ int envoie_nom_de_client(int socketfd) {
   fgets(message, 1024, stdin);
   strcpy(data, "nom: ");
   strcat(data, message);
+
+  encoderCommunication(data);
   
   int write_status = write(socketfd, data, strlen(data));
   if ( write_status < 0 ) {
@@ -108,13 +171,14 @@ int envoie_nom_de_client(int socketfd) {
   // la réinitialisation de l'ensemble des données
   memset(data, 0, sizeof(data));
 
-
   // lire les données de la socket
   int read_status = read(socketfd, data, sizeof(data));
   if ( read_status < 0 ) {
     perror("erreur lecture");
     return -1;
   }
+
+  decoderCommunication(data);
 
   printf("Nom recu: %s\n", data);
  
@@ -133,6 +197,8 @@ int envoie_de_calcul(int socketfd) {
   fgets(message, 1024, stdin);
   strcpy(data, "calcul: ");
   strcat(data, message);
+
+  encoderCommunication(data);
   
   int write_status = write(socketfd, data, strlen(data));
   if ( write_status < 0 ) {
@@ -143,13 +209,14 @@ int envoie_de_calcul(int socketfd) {
   // la réinitialisation de l'ensemble des données
   memset(data, 0, sizeof(data));
 
-
   // lire les données de la socket
   int read_status = read(socketfd, data, sizeof(data));
   if ( read_status < 0 ) {
     perror("erreur lecture");
     return -1;
   }
+
+  decoderCommunication(data);
 
   printf("Resultat recu: %s\n", data);
  
