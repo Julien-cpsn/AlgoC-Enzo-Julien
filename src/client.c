@@ -17,7 +17,9 @@
 #include "bmp.h"
 
 /* ===== FONCTIONS ===== */
-/* 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+/*
  * Fonction d'envoi et de réception de messages
  * Il faut un argument : l'identifiant de la socket
  */
@@ -234,25 +236,27 @@ int envoie_json(int socketfd, char *pathname) {
             // lecture jusqu'a code
             strtok(line, ":");
             strtok(NULL, "\"");
-            char* code = strtok(NULL, "\""); // récupération du code
+            // récupération du code
+            char* code = strtok(NULL, "\"");
+            printf("code: %s\n", code);
 
             // lecture des valeurs
-            strtok(NULL, "[");
-            char* token = NULL;
-            char* ptr;
             char* values[100];
-            for (int j = 0; 1; ++j) {
-                values[j] = strtok(NULL, "\"");
-                token = strtok_r(NULL, "", &ptr); // LIRE UN SEUL CARACTERE ALED
-                if (!strcmp(token, "]")) {
-                    printf("%s: ", code);
-                    for (int k = 0; k < sizeof(values); ++k) {
-                        printf("%s, ", values[k]);
+
+            strtok(NULL, "[");
+            char* token = strtok(NULL, "]");
+            for (int j = 0; j <= strlen(token); ++j) {
+                if (token[j] == '"') {
+                    ++j;
+                    while (token[j] != '"') { // TODO À débuguer
+                        strncat(values[sizeof(values)/sizeof(values[0]) - 1], &token[j], 1);
+                        ++j;
                     }
-                    printf("\n");
-                    return 0;
+                    printf("test: %s", values[sizeof(values)/sizeof(values[0]) - 1]);
+                    break;
                 }
             }
+            printf("\n");
         }
     }
 
@@ -331,3 +335,5 @@ int main(int argc, char **argv) {
 
   close(socketfd);
 }
+
+#pragma clang diagnostic pop
