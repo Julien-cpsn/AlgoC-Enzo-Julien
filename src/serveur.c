@@ -58,12 +58,85 @@ void plot(char *data) {
   pclose(p);
 }
 
+void encoderCommunication(char* data){
+  char json[5000];
+  char code[24], valeurs[500];
+  char* commande = strtok(data," ");
+  char* newValeurs = strtok(NULL," ");
+
+    if(!strcmp(commande,"message:")){
+      strcat(code,"message");
+      strcat(valeurs,newValeurs);
+    }
+    else if(!strcmp(commande,"nom:")){
+      strcat(code,"nom");
+      strcat(valeurs,newValeurs);
+    }
+    else if(!strcmp(commande,"calcul:")){
+      strcat(code,"calcul");
+      strcat(valeurs,newValeurs);
+    }
+
+  strcat(strcpy(json,"{"),"\"code\" : \"");
+  strcat(json,code);
+  strcat(json,"\",\"valeurs\" : [ \"");
+  strcat(json,valeurs);
+  strcat(json,"\" ]}");
+  strcpy(data,json);
+}
+
+void decoderCommunication(char* data){
+  char* code = strtok(data, "\"");
+  char* valeurs;
+  char* newValeurs;
+  char unparseData[1024];
+  for(int i = 0 ; i < 3 ; ++i){
+    code = strtok(NULL,"\"");
+  }
+
+  for(int i = 0 ; i < 2 ; ++i){
+    valeurs = strtok(NULL,"\"");
+  }
+
+  if(!strcmp(code,"calcul")){
+    newValeurs = strtok(NULL,"\"");
+    newValeurs = strtok(NULL,"\"");
+    strcpy(valeurs,newValeurs);
+    newValeurs = strtok(NULL,"\"");
+    newValeurs = strtok(NULL,"\"");
+    strcat(valeurs," ");
+    strcat(valeurs,newValeurs);
+    newValeurs = strtok(NULL,"\"");
+    newValeurs = strtok(NULL,"\"");
+    strcat(valeurs," ");
+    strcat(valeurs,newValeurs);
+  }
+  else if(!strcmp(code,"balises")){
+    /*newValeurs = strtok(NULL,"[");
+    newValeurs = strtok(NULL,"]");*/
+  }
+  else{
+    for(int i = 0 ; i < 2 ; ++i){
+      valeurs = strtok(NULL,"\"");
+    }
+  }
+
+  strcat(strcpy(unparseData,code),": ");
+  strcat(unparseData,valeurs);
+  strcpy(data,unparseData);
+}
+
 
 /* ===== RENVOIS ====== */
 /*
  * renvoyer un message (*data) au client (client_socket_fd)
  */
 int renvoie_message(int client_socket_fd, char *data) {
+
+  encoderCommunication(data);
+  
+  printf("Data: %s",data);
+
   int data_size = write (client_socket_fd, (void *) data, strlen(data));
       
   if (data_size < 0) {
@@ -76,6 +149,9 @@ int renvoie_message(int client_socket_fd, char *data) {
  * renvoyer un nom (*data) au client (client_socket_fd)
  */
 int renvoie_nom(int client_socket_fd, char *data) {
+
+  encoderCommunication(data);
+
   int data_size = write (client_socket_fd, (void *) data, strlen(data));
       
   if (data_size < 0) {
@@ -115,7 +191,10 @@ int renvoie_calcul(int client_socket_fd, char *data) {
 
   // préparation de la réponse
   char reponse[50];
-  sprintf(reponse, "%f", resultat); 
+  strcpy(reponse,"calcul: ");
+  sprintf(tmp, "%f", resultat); 
+  strcat(reponse,tmp);
+  encoderCommunication(reponse);
 
   // envoi de la réponse
   int data_size = write (client_socket_fd, (void *) reponse, strlen(reponse));
@@ -186,6 +265,7 @@ int recois_envoie(int socketfd) {
    * extraire le code des données envoyées par le client. 
    * Les données envoyées par le client peuvent commencer par le mot "message :" ou un autre mot.
    */
+  decoderCommunication(data);
   printf ("Message recu: %s\n", data);
   char code[10];
   sscanf(data, "%s", code);
