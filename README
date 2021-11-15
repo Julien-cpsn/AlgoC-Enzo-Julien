@@ -1,15 +1,17 @@
 # Bibliothèques
-* 
-*
+Aucune bibliothèque demandée
 
 # Références
-*
-*
+Clean code - Robert C. Martin
 
 # Difficulté
 *
 
 # Commentaires
-* 
-* 
-
+Commandes du client :
+- nom
+- message
+- calcul
+- couleurs chemin_du_fichier
+- balise
+- plot chemin_du_fichier nombre_de_couleurs (<30)
