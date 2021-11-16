@@ -9,8 +9,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <sys/types.h>  
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <stdbool.h>
 
 #include "client.h"
 #include "bmp.h"
@@ -77,39 +79,56 @@ void analyse(char *pathname, char *data, int nb_colors) {
 /* ===== JSON ===== */
 void encoder(char* data){ //encode en JSON pour la communication client/serveur
     char json[5000];
-    char code[24], valeurs[500];
-    char* commande = strtok(data," ");
-    char* newValue;
+    int nombre_valeurs = 500;
+    char* valeurs[nombre_valeurs];
+    char* delimiters[] = {"\0"," ",", "};
+    char* delimiter;
+    char* commande = strtok(data,":");
+    char* token = strtok(NULL,"\0");
 
-    if(strcmp(commande,"calcul:") != 0){
-        newValue = strtok(NULL, " ");
-
-        if(!strcmp(commande,"message:")){
-            strcat(code,"message");
-            strcat(valeurs, newValue);
-        }
-        else if(!strcmp(commande,"nom:")){
-            strcat(code,"nom");
-            strcat(valeurs, newValue);
-        }
+    if(!strcmp(commande,"message")){
+        delimiter = delimiters[0];
     }
-    else{
-        strcat(code,"calcul");
-        for(int i = 0; i < 3 ; ++i){
-            newValue = strtok(NULL, " ");
-            if(i<2)
-                strcat(strcat(valeurs, newValue), "\", \"");
-            else
-                strcat(valeurs, newValue);
-        }
+    else if(!strcmp(commande,"nom")){
+        delimiter = delimiters[0];
+    }
+    else if(!strcmp(commande,"calcul")){
+        delimiter = delimiters[1];
+    }
+    else if(!strcmp(commande,"couleurs")){
+        delimiter = delimiters[2];
+    }
+    else if(!strcmp(commande,"balises")){
+        delimiter = delimiters[2];
     }
 
-    strcat(strcpy(json,"{"),"\"code\" : \"");
-    strcat(json,code);
-    strcat(json,"\",\"valeurs\" : [ \"");
-    strcat(json,valeurs);
-    strcat(json,"\" ]}");
+    char* segment = strtok(token,delimiter);
+    int indice = 0;
+
+    do{
+        valeurs[indice] = malloc(sizeof(char));
+        strcpy(valeurs[indice],segment);
+        indice++;
+        segment = strtok(NULL,delimiter);
+    }while(segment != NULL);
+
+    strcat(strcpy(json,"{"),"\"code\": \"");
+    strcat(json,commande);
+    strcat(json,"\",\"valeurs\": [");
+    for(int i = 0; valeurs[i] != NULL && i < nombre_valeurs; ++i){
+        strcat(json,"\"");
+        strcat(json,valeurs[i]);
+        strcat(json,"\"");
+        if(valeurs[i+1] != NULL){
+            strcat(json,", ");
+        }
+    }
+    strcat(json,"]}");
     strcpy(data,json);
+
+    for(int i = 0; i <= indice; ++i){
+        free(valeurs[indice]);
+    }
 }
 
 char* decoder(char* message, char** values) {
@@ -162,7 +181,7 @@ int envoie_recois_message(int socketfd) {
     strcat(data, message);
 
     encoder(data);
-    
+
     int write_status = write(socketfd, data, strlen(data));
     if ( write_status < 0 ) {
         perror("erreur ecriture");
@@ -204,7 +223,7 @@ int envoie_nom_de_client(int socketfd) {
     strcat(data, message);
 
     encoder(data);
-    
+
     int write_status = write(socketfd, data, strlen(data));
     if ( write_status < 0 ) {
         perror("erreur ecriture");
@@ -242,7 +261,7 @@ int envoie_de_calcul(int socketfd) {
     strcat(data, message);
 
     encoder(data);
-    
+
     int write_status = write(socketfd, data, strlen(data));
     if ( write_status < 0 ) {
         perror("erreur ecriture");
@@ -271,7 +290,9 @@ int envoie_couleurs(int socketfd, char *pathname) {
     memset(data, 0, sizeof(data));
     strcpy(data, "couleurs: ");
     analyse(pathname, data, 10); // récupère les couleurs de l'image
-    
+
+    encoder(data);
+
     int write_status = write(socketfd, data, strlen(data));
     if ( write_status < 0 ) {
         perror("erreur ecriture");
@@ -291,7 +312,9 @@ int envoie_balises(int socketfd) {
     printf("Vos balises (max 1000 caracteres): ");
     fgets(balises, 1024, stdin);
     sprintf(data, "balises: %s", balises);
-    
+
+    encoder(data);
+
     int write_status = write(socketfd, data, strlen(data));
     if ( write_status < 0 ) {
         perror("erreur ecriture");
@@ -362,11 +385,11 @@ int main(int argc, char **argv) {
         envoie_balises(socketfd);
     }
     else if (!strcmp(argv[1], "plot")) {
-            if (atoi(argv[3]) > 30) {
-                    perror("Nombre de couleurs doit etre inferieur a 30");
-                    exit(EXIT_FAILURE);
-            }
-            envoie_plot(socketfd, argv[2], atoi(argv[3])); // chemin de l'image en deuxième argument et nombre de couleurs pour le troisième argument
+        if (atoi(argv[3]) > 30) {
+            perror("Nombre de couleurs doit etre inferieur a 30");
+            exit(EXIT_FAILURE);
+        }
+        envoie_plot(socketfd, argv[2], atoi(argv[3])); // chemin de l'image en deuxième argument et nombre de couleurs pour le troisième argument
     }
     else {
         perror("Mauvais argument");
