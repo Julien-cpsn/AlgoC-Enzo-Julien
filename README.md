@@ -1,4 +1,9 @@
-# Bibliothèques
+# Algo C - Partie 1 et 2
+## Développeurs
+- Enzo LOUNI
+- Julien CAPOSIENA
+
+### Bibliothèques
 Packages UNIX utilisés :
 - gcc
 - make
@@ -7,13 +12,13 @@ Packages UNIX utilisés :
 Bibliothèques C utilisées :
 - Aucunes bibliothèques demandées
 
-# Références
-Clean code - Robert C. Martin
+### Références
+- Clean code - Robert C. Martin
 
-# Difficulté
-char *
+### Difficultés
+- char *
 
-# Commentaires
+### Commentaires
 **Dans le dossier `/src`**
 
 Compiler le projet :
