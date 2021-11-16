@@ -9,10 +9,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <sys/types.h>  
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <stdbool.h>
 
 #include "client.h"
 #include "bmp.h"
@@ -34,18 +32,17 @@ char **nouveauTableauString() {
 }
 
 void afficherMessageRecu(char* code, char** values) {
-    printf("Message\n Code: %s\n Valeurs:\n", code);
+    printf("Données décodées: %s: ", code);
     for (int i = 0; i < sizeof(values); ++i) {
         if (strlen(values[i]) > 0) {
             printf("%s", values[i]);
             if (i != sizeof(values) - 1) {
-                printf(",");
+                printf(" ");
             }
         }
     }
     printf("\n");
 }
-
 
 void analyse(char *pathname, char *data, int nb_colors) {
     //compte de couleurs
@@ -101,6 +98,9 @@ void encoder(char* data){ //encode en JSON pour la communication client/serveur
     else if(!strcmp(commande,"balises")){
         delimiter = delimiters[2];
     }
+    else if(!strcmp(commande,"plot")){
+        delimiter = delimiters[2];
+    }
 
     char* segment = strtok(token,delimiter);
     int indice = 0;
@@ -114,7 +114,7 @@ void encoder(char* data){ //encode en JSON pour la communication client/serveur
 
     strcat(strcpy(json,"{"),"\"code\": \"");
     strcat(json,commande);
-    strcat(json,"\",\"valeurs\": [");
+    strcat(json,"\", \"valeurs\": [");
     for(int i = 0; valeurs[i] != NULL && i < nombre_valeurs; ++i){
         strcat(json,"\"");
         strcat(json,valeurs[i]);
@@ -173,7 +173,7 @@ int envoie_recois_message(int socketfd) {
     char message[100];
     printf("Votre message (max 1000 caracteres): ");
     if (fgets(message, sizeof(message), stdin) == NULL) {
-        fprintf(stderr, "Error reading Name.\n");
+        fprintf(stderr, "Error reading.\n");
         exit(1);
     }
     message[strcspn(message, "\r\n")] = 0;
@@ -198,6 +198,7 @@ int envoie_recois_message(int socketfd) {
         return -1;
     }
 
+    printf("Données reçues: %s\n\n", data);
     char** values = nouveauTableauString();
     char* code = decoder(data, values);
     afficherMessageRecu(code, values);
@@ -215,7 +216,7 @@ int envoie_nom_de_client(int socketfd) {
     char message[100];
     printf("Votre nom (max 100 caracteres): ");
     if (fgets(message, sizeof(message), stdin) == NULL) {
-        fprintf(stderr, "Error reading Name.\n");
+        fprintf(stderr, "Error reading.\n");
         exit(1);
     }
     message[strcspn(message, "\r\n")] = 0;
@@ -240,6 +241,7 @@ int envoie_nom_de_client(int socketfd) {
         return -1;
     }
 
+    printf("Données reçues: %s\n\n", data);
     char** values = nouveauTableauString();
     char* code = decoder(data, values);
     afficherMessageRecu(code, values);
@@ -256,7 +258,11 @@ int envoie_de_calcul(int socketfd) {
     // Demandez à l'utilisateur d'entrer son nom
     char message[100];
     printf("Votre calcul (max 1000 caracteres): ");
-    fgets(message, 1024, stdin);
+    if (fgets(message, sizeof(message), stdin) == NULL) {
+        fprintf(stderr, "Error reading Name.\n");
+        exit(1);
+    }
+    message[strcspn(message, "\r\n")] = 0;
     strcpy(data, "calcul: ");
     strcat(data, message);
 
@@ -278,6 +284,7 @@ int envoie_de_calcul(int socketfd) {
         return -1;
     }
 
+    printf("Données reçues: %s\n\n", data);
     char** values = nouveauTableauString();
     char* code = decoder(data, values);
     afficherMessageRecu(code, values);
@@ -310,7 +317,11 @@ int envoie_balises(int socketfd) {
     // Demandez à l'utilisateur d'entrer son nombre de balises et ses balises
     char balises[1000];
     printf("Vos balises (max 1000 caracteres): ");
-    fgets(balises, 1024, stdin);
+    if (fgets(balises, sizeof(balises), stdin) == NULL) {
+        fprintf(stderr, "Error reading Name.\n");
+        exit(1);
+    }
+    balises[strcspn(balises, "\r\n")] = 0;
     sprintf(data, "balises: %s", balises);
 
     encoder(data);
@@ -329,6 +340,8 @@ int envoie_plot(int socketfd, char *pathname, int nb_colors) {
     memset(data, 0, sizeof(data));
     strcpy(data, "plot: ");
     analyse(pathname, data, nb_colors); // récupère les couleurs de l'image
+
+    encoder(data);
 
     int write_status = write(socketfd, data, strlen(data));
     if ( write_status < 0 ) {
