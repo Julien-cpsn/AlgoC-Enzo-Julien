@@ -12,6 +12,7 @@
 #include <sys/types.h>  
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <stdbool.h>
 
 #include "client.h"
 #include "bmp.h"
@@ -27,39 +28,56 @@
 
 void encoderCommunication(char* data){ //encode en JSON pour la communication client/serveur
   char json[5000];
-  char code[24], valeurs[500];
-  char* commande = strtok(data," ");
-  char* newValeurs;
+  int nombre_valeurs = 500;
+  char* valeurs[nombre_valeurs];
+  char* delimiters[] = {"\0"," ",", "};
+  char* delimiter;
+  char* commande = strtok(data,":");
+  char* token = strtok(NULL,"\0");
 
-  if(strcmp(commande,"calcul:")){
-    newValeurs = strtok(NULL," ");
-
-    if(!strcmp(commande,"message:")){
-      strcat(code,"message");
-      strcat(valeurs,newValeurs);
-    }
-    else if(!strcmp(commande,"nom:")){
-      strcat(code,"nom");
-      strcat(valeurs,newValeurs);
-    }
+  if(!strcmp(commande,"message")){
+    delimiter = delimiters[0];
   }
-  else{
-    strcat(code,"calcul");
-    for(int i = 0; i < 3 ; ++i){
-      newValeurs = strtok(NULL," ");
-      if(i<2)
-        strcat(strcat(valeurs,newValeurs),"\", \"");
-      else
-        strcat(valeurs,newValeurs);
-    }
+  else if(!strcmp(commande,"nom")){
+    delimiter = delimiters[0];
+  }
+  else if(!strcmp(commande,"calcul")){
+    delimiter = delimiters[1];
+  }
+  else if(!strcmp(commande,"couleurs")){
+    delimiter = delimiters[2];
+  }
+  else if(!strcmp(commande,"balises")){
+    delimiter = delimiters[2];
   }
 
-  strcat(strcpy(json,"{"),"\"code\" : \"");
-  strcat(json,code);
-  strcat(json,"\",\"valeurs\" : [ \"");
-  strcat(json,valeurs);
-  strcat(json,"\" ]}");
+  char* segment = strtok(token,delimiter);
+  int indice = 0;
+
+  do{
+    valeurs[indice] = malloc(sizeof(char));
+    strcpy(valeurs[indice],segment);
+    indice++;
+    segment = strtok(NULL,delimiter);
+  }while(segment != NULL);
+
+  strcat(strcpy(json,"{"),"\"code\": \"");
+  strcat(json,commande);
+  strcat(json,"\",\"valeurs\": [");
+  for(int i = 0; valeurs[i] != NULL && i < nombre_valeurs; ++i){
+    strcat(json,"\"");
+    strcat(json,valeurs[i]);
+    strcat(json,"\"");
+    if(valeurs[i+1] != NULL){
+      strcat(json,", ");
+    }
+  }
+  strcat(json,"]}");
   strcpy(data,json);
+
+  for(int i = 0; i <= indice; ++i){
+    free(valeurs[indice]);
+  }
 }
 
 void decoderCommunication(char* data){ //decode en JSON pour la communication client/serveur
@@ -113,7 +131,7 @@ int envoie_recois_message(int socketfd) {
     return -1;
   }
 
-  decoderCommunication(data);
+  //decoderCommunication(data);
 
   printf("Message recu: %s\n", data);
  
@@ -230,6 +248,8 @@ int envoie_couleurs(int socketfd, char *pathname) {
   memset(data, 0, sizeof(data));
   strcpy(data, "couleurs: ");
   analyse(pathname, data, 10); // récupère les couleurs de l'image
+
+  encoderCommunication(data);
   
   int write_status = write(socketfd, data, strlen(data));
   if ( write_status < 0 ) {
@@ -251,6 +271,8 @@ int envoie_balises(int socketfd) {
   printf("Vos balises (max 1000 caracteres): ");
   fgets(balises, 1024, stdin);
   sprintf(data, "balises: %s", balises);
+
+  encoderCommunication(data);
   
   int write_status = write(socketfd, data, strlen(data));
   if ( write_status < 0 ) {

@@ -60,29 +60,58 @@ void plot(char *data) {
 
 void encoderCommunication(char* data){
   char json[5000];
-  char code[24], valeurs[500];
-  char* commande = strtok(data," ");
-  char* newValeurs = strtok(NULL," ");
+  int nombre_valeurs = 500;
+  char* valeurs[nombre_valeurs];
+  char* delimiters[] = {"\0"," ",", "};
+  char* delimiter;
+  char* commande = strtok(data,":");
+  char* token = strtok(NULL,"\0");
 
-    if(!strcmp(commande,"message:")){
-      strcat(code,"message");
-      strcat(valeurs,newValeurs);
-    }
-    else if(!strcmp(commande,"nom:")){
-      strcat(code,"nom");
-      strcat(valeurs,newValeurs);
-    }
-    else if(!strcmp(commande,"calcul:")){
-      strcat(code,"calcul");
-      strcat(valeurs,newValeurs);
-    }
+  printf("Token: %s",token);
 
-  strcat(strcpy(json,"{"),"\"code\" : \"");
-  strcat(json,code);
-  strcat(json,"\",\"valeurs\" : [ \"");
-  strcat(json,valeurs);
-  strcat(json,"\" ]}");
+  if(!strcmp(commande,"message")){
+    delimiter = delimiters[0];
+  }
+  else if(!strcmp(commande,"nom")){
+    delimiter = delimiters[0];
+  }
+  else if(!strcmp(commande,"calcul")){
+    delimiter = delimiters[1];
+  }
+  else if(!strcmp(commande,"couleurs")){
+    delimiter = delimiters[2];
+  }
+  else if(!strcmp(commande,"balises")){
+    delimiter = delimiters[2];
+  }
+
+  char* segment = strtok(token,delimiter);
+  int indice = 0;
+
+  do{
+    valeurs[indice] = malloc(sizeof(char));
+    strcpy(valeurs[indice],segment);
+    indice++;
+    segment = strtok(NULL,delimiter);
+  }while(segment != NULL);
+
+  strcat(strcpy(json,"{"),"\"code\": \"");
+  strcat(json,commande);
+  strcat(json,"\",\"valeurs\": [");
+  for(int i = 0; valeurs[i] != NULL && i < nombre_valeurs; ++i){
+    strcat(json,"\"");
+    strcat(json,valeurs[i]);
+    strcat(json,"\"");
+    if(valeurs[i+1] != NULL){
+      strcat(json,", ");
+    }
+  }
+  strcat(json,"]}");
   strcpy(data,json);
+
+  for(int i = 0; i <= indice; ++i){
+    free(valeurs[indice]);
+  }
 }
 
 void decoderCommunication(char* data){
