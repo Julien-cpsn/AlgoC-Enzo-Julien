@@ -13,10 +13,6 @@
  */
 #define PORT 8089
 
-/* 
- * Fonction d'envoi et de réception de messages
- * Il faut un argument : l'identifiant de la socket
- */
 int envoie_recois_message(int socketfd);
 int envoie_nom_de_client(int socketfd);
 int envoie_de_calcul(int socketfd);

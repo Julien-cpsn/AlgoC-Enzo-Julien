@@ -11,10 +11,6 @@
 
 #define PORT 8089
 
-/* accepter la nouvelle connection d'un client et lire les données
- * envoyées par le client. En suite, le serveur envoie un message
- * en retour
- */
 int recois_envoie(int socketfd);
 
 int renvoie_message(int client_socket_fd, char *data);
@@ -22,5 +18,6 @@ int renvoie_nom(int client_socket_fd, char *data);
 int renvoie_calcul(int client_socket_fd, char* data);
 int renvoie_sauvegarde_couleurs(int client_socket_fd, char* data);
 int renvoie_sauvegarde_balises(int client_socket_fd, char* data);
+void plot(char *data);
 
 #endif
