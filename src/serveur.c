@@ -58,7 +58,7 @@ void plot(char *data) {
   pclose(p);
 }
 
-void encoderCommunication(char* data){
+void encoder(char* data){
   char json[5000];
   char code[24], valeurs[500];
   char* commande = strtok(data," ");
@@ -133,9 +133,9 @@ void decoderCommunication(char* data){
  */
 int renvoie_message(int client_socket_fd, char *data) {
 
-  encoderCommunication(data);
+    encoder(data);
   
-  printf("Data: %s",data);
+  printf("Data: %s\n",data);
 
   int data_size = write (client_socket_fd, (void *) data, strlen(data));
       
@@ -150,7 +150,7 @@ int renvoie_message(int client_socket_fd, char *data) {
  */
 int renvoie_nom(int client_socket_fd, char *data) {
 
-  encoderCommunication(data);
+    encoder(data);
 
   int data_size = write (client_socket_fd, (void *) data, strlen(data));
       
@@ -194,7 +194,7 @@ int renvoie_calcul(int client_socket_fd, char *data) {
   strcpy(reponse,"calcul: ");
   sprintf(tmp, "%f", resultat); 
   strcat(reponse,tmp);
-  encoderCommunication(reponse);
+    encoder(reponse);
 
   // envoi de la réponse
   int data_size = write (client_socket_fd, (void *) reponse, strlen(reponse));

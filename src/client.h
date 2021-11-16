@@ -23,6 +23,5 @@ int envoie_de_calcul(int socketfd);
 int envoie_couleurs(int socketfd, char *pathname);
 int envoie_balises(int socketfd);
 int envoie_plot(int socketfd, char *pathname, int nb_colors);
-int envoie_json(int socketfd, char *pathname);
 
 #endif

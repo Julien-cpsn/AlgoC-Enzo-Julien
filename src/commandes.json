@@ -3,7 +3,7 @@
   "valeurs": ["bonjour"]
 }
 {
-  "code": "calcule",
+  "code": "calcul",
   "valeurs": ["+", "23", "45"]
 }
 {

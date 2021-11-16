@@ -9,254 +9,296 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <sys/types.h>  
 #include <sys/socket.h>
 #include <netinet/in.h>
 
 #include "client.h"
 #include "bmp.h"
 
-/* ===== FONCTIONS ===== */
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-/*
- * Fonction d'envoi et de réception de messages
- * Il faut un argument : l'identifiant de la socket
- */
-
-
-void encoderCommunication(char* data){ //encode en JSON pour la communication client/serveur
-  char json[5000];
-  char code[24], valeurs[500];
-  char* commande = strtok(data," ");
-  char* newValeurs;
-
-  if(strcmp(commande,"calcul:")){
-    newValeurs = strtok(NULL," ");
-
-    if(!strcmp(commande,"message:")){
-      strcat(code,"message");
-      strcat(valeurs,newValeurs);
+/* ===== FONCTIONS =====*/
+char **nouveauTableauString() {
+    char** array = malloc(sizeof(char*) * 50);
+    if (array == NULL) {
+        exit(1);
     }
-    else if(!strcmp(commande,"nom:")){
-      strcat(code,"nom");
-      strcat(valeurs,newValeurs);
+    for(int i = 0; i < 50; i++){
+        array[i] = (char *)malloc(50 + 1);
+        if (array[i] == NULL) {
+            exit(1);
+        }
     }
-  }
-  else{
-    strcat(code,"calcul");
-    for(int i = 0; i < 3 ; ++i){
-      newValeurs = strtok(NULL," ");
-      if(i<2)
-        strcat(strcat(valeurs,newValeurs),"\", \"");
-      else
-        strcat(valeurs,newValeurs);
-    }
-  }
 
-  strcat(strcpy(json,"{"),"\"code\" : \"");
-  strcat(json,code);
-  strcat(json,"\",\"valeurs\" : [ \"");
-  strcat(json,valeurs);
-  strcat(json,"\" ]}");
-  strcpy(data,json);
+    return array;
 }
 
-void decoderCommunication(char* data){ //decode en JSON pour la communication client/serveur
-  char* code = strtok(data, "\"");
-  char* valeurs;
-  char unparseData[1024];
-  for(int i = 0 ; i < 7 ; ++i){
-    if(i < 3)
-      code = strtok(NULL,"\"");
-    else
-      valeurs = strtok(NULL, "\"");
-  }
-
-  strcat(strcpy(unparseData,code),": ");
-  strcat(unparseData,valeurs);
-  strcpy(data,unparseData);
+void afficherMessageRecu(char* code, char** values) {
+    printf("Message\n Code: %s\n Valeurs:\n", code);
+    for (int i = 0; i < sizeof(values); ++i) {
+        if (strlen(values[i]) > 0) {
+            printf("%s", values[i]);
+            if (i != sizeof(values) - 1) {
+                printf(",");
+            }
+        }
+    }
+    printf("\n");
 }
 
-
-
-
-int envoie_recois_message(int socketfd) {
- 
-  char data[1024];
-  // la réinitialisation de l'ensemble des données
-  memset(data, 0, sizeof(data));
-
-
-  // Demandez à l'utilisateur d'entrer un message
-  char message[100];
-  printf("Votre message (max 1000 caracteres): ");
-  fgets(message, 1024, stdin);
-  strcpy(data, "message: ");
-  strcat(data, message);
-
-  encoderCommunication(data);
-  
-  int write_status = write(socketfd, data, strlen(data));
-  if ( write_status < 0 ) {
-    perror("erreur ecriture");
-    exit(EXIT_FAILURE);
-  }
-
-  // la réinitialisation de l'ensemble des données
-  memset(data, 0, sizeof(data));
-
-  // lire les données de la socket
-  int read_status = read(socketfd, data, sizeof(data));
-  if ( read_status < 0 ) {
-    perror("erreur lecture");
-    return -1;
-  }
-
-  decoderCommunication(data);
-
-  printf("Message recu: %s\n", data);
- 
-  return 0;
-}
 
 void analyse(char *pathname, char *data, int nb_colors) {
-  //compte de couleurs
-  couleur_compteur *cc = analyse_bmp_image(pathname);
+    //compte de couleurs
+    couleur_compteur *cc = analyse_bmp_image(pathname);
 
-  int count;
-  char temp_string[nb_colors];
-  if (cc->size <= nb_colors) {
-      sprintf(temp_string, "%d,", cc->size);
-  }
-  else {
-      sprintf(temp_string, "%d,", nb_colors);
-  }
-  strcat(data, temp_string);
-
-  //choisir n (<=30) couleurs
-  for (count = 1; count < nb_colors + 1 && cc->size - count > 0; count++) {
-    if(cc->compte_bit ==  BITS32) {
-      sprintf(temp_string, "#%02x%02x%02x,", cc->cc.cc24[cc->size-count].c.rouge,cc->cc.cc32[cc->size-count].c.vert,cc->cc.cc32[cc->size-count].c.bleu);
+    int count;
+    char temp_string[nb_colors];
+    if (cc->size <= nb_colors) {
+        sprintf(temp_string, "%d,", cc->size);
     }
-    if(cc->compte_bit ==  BITS24) {
-      sprintf(temp_string, "#%02x%02x%02x,", cc->cc.cc32[cc->size-count].c.rouge,cc->cc.cc32[cc->size-count].c.vert,cc->cc.cc32[cc->size-count].c.bleu);
+    else {
+        sprintf(temp_string, "%d,", nb_colors);
     }
     strcat(data, temp_string);
-  }
 
-  //enlever le dernier virgule
-  data[strlen(data)-1] = '\0';
+    //choisir n (<=30) couleurs
+    for (count = 1; count < nb_colors + 1 && cc->size - count > 0; count++) {
+        if(cc->compte_bit ==    BITS32) {
+            sprintf(temp_string, "#%02x%02x%02x,", cc->cc.cc24[cc->size-count].c.rouge,cc->cc.cc32[cc->size-count].c.vert,cc->cc.cc32[cc->size-count].c.bleu);
+        }
+        if(cc->compte_bit ==    BITS24) {
+            sprintf(temp_string, "#%02x%02x%02x,", cc->cc.cc32[cc->size-count].c.rouge,cc->cc.cc32[cc->size-count].c.vert,cc->cc.cc32[cc->size-count].c.bleu);
+        }
+        strcat(data, temp_string);
+    }
+
+    //enlever le dernier virgule
+    data[strlen(data)-1] = '\0';
+}
+
+/* ===== JSON ===== */
+void encoder(char* data){ //encode en JSON pour la communication client/serveur
+    char json[5000];
+    char code[24], valeurs[500];
+    char* commande = strtok(data," ");
+    char* newValue;
+
+    if(strcmp(commande,"calcul:") != 0){
+        newValue = strtok(NULL, " ");
+
+        if(!strcmp(commande,"message:")){
+            strcat(code,"message");
+            strcat(valeurs, newValue);
+        }
+        else if(!strcmp(commande,"nom:")){
+            strcat(code,"nom");
+            strcat(valeurs, newValue);
+        }
+    }
+    else{
+        strcat(code,"calcul");
+        for(int i = 0; i < 3 ; ++i){
+            newValue = strtok(NULL, " ");
+            if(i<2)
+                strcat(strcat(valeurs, newValue), "\", \"");
+            else
+                strcat(valeurs, newValue);
+        }
+    }
+
+    strcat(strcpy(json,"{"),"\"code\" : \"");
+    strcat(json,code);
+    strcat(json,"\",\"valeurs\" : [ \"");
+    strcat(json,valeurs);
+    strcat(json,"\" ]}");
+    strcpy(data,json);
+}
+
+char* decoder(char* message, char** values) {
+    // lecture jusqu'a code
+    strtok(message, ":");
+    strtok(NULL, "\"");
+    // récupération du code
+    char* code = strtok(NULL, "\"");
+
+    // lecture des valeurs
+    int countValues = 0;
+
+    strtok(NULL, "[");
+    char* token = strtok(NULL, "]");
+    for (int i = 0; i <= strlen(token); ++i) {
+        if (token[i] == '"') {
+            char tempString[50];
+            memset(tempString, '\0', 50);
+            int j;
+            for (j = 0; token[i + 1] != '"'; ++j) {
+                ++i;
+                tempString[j] = token[i];
+            }
+            strcpy(values[countValues], tempString);
+            ++countValues;
+            ++i;
+        }
+    }
+
+    return code;
+}
+
+/* ===== SERVICES ===== */
+int envoie_recois_message(int socketfd) {
+ 
+    char data[1024];
+    // la réinitialisation de l'ensemble des données
+    memset(data, 0, sizeof(data));
+
+
+    // Demandez à l'utilisateur d'entrer un message
+    char message[100];
+    printf("Votre message (max 1000 caracteres): ");
+    if (fgets(message, sizeof(message), stdin) == NULL) {
+        fprintf(stderr, "Error reading Name.\n");
+        exit(1);
+    }
+    message[strcspn(message, "\r\n")] = 0;
+    strcpy(data, "message: ");
+    strcat(data, message);
+
+    encoder(data);
+    
+    int write_status = write(socketfd, data, strlen(data));
+    if ( write_status < 0 ) {
+        perror("erreur ecriture");
+        exit(EXIT_FAILURE);
+    }
+
+    // la réinitialisation de l'ensemble des données
+    memset(data, 0, sizeof(data));
+
+    // lire les données de la socket
+    int read_status = read(socketfd, data, sizeof(data));
+    if ( read_status < 0 ) {
+        perror("erreur lecture");
+        return -1;
+    }
+
+    char** values = nouveauTableauString();
+    char* code = decoder(data, values);
+    afficherMessageRecu(code, values);
+
+    return 0;
 }
 
 int envoie_nom_de_client(int socketfd) {
-  char data[1024];
-  // la réinitialisation de l'ensemble des données
-  memset(data, 0, sizeof(data));
+    char data[1024];
+    // la réinitialisation de l'ensemble des données
+    memset(data, 0, sizeof(data));
 
 
-  // Demandez à l'utilisateur d'entrer son nom
-  char message[100];
-  printf("Votre nom (max 1000 caracteres): ");
-  fgets(message, 1024, stdin);
-  strcpy(data, "nom: ");
-  strcat(data, message);
+    // Demandez à l'utilisateur d'entrer son nom
+    char message[100];
+    printf("Votre nom (max 100 caracteres): ");
+    if (fgets(message, sizeof(message), stdin) == NULL) {
+        fprintf(stderr, "Error reading Name.\n");
+        exit(1);
+    }
+    message[strcspn(message, "\r\n")] = 0;
+    strcpy(data, "nom: ");
+    strcat(data, message);
 
-  encoderCommunication(data);
-  
-  int write_status = write(socketfd, data, strlen(data));
-  if ( write_status < 0 ) {
-    perror("erreur ecriture");
-    exit(EXIT_FAILURE);
-  }
+    encoder(data);
+    
+    int write_status = write(socketfd, data, strlen(data));
+    if ( write_status < 0 ) {
+        perror("erreur ecriture");
+        exit(EXIT_FAILURE);
+    }
 
-  // la réinitialisation de l'ensemble des données
-  memset(data, 0, sizeof(data));
+    // la réinitialisation de l'ensemble des données
+    memset(data, 0, sizeof(data));
 
-  // lire les données de la socket
-  int read_status = read(socketfd, data, sizeof(data));
-  if ( read_status < 0 ) {
-    perror("erreur lecture");
-    return -1;
-  }
+    // lire les données de la socket
+    int read_status = read(socketfd, data, sizeof(data));
+    if ( read_status < 0 ) {
+        perror("erreur lecture");
+        return -1;
+    }
 
-  decoderCommunication(data);
+    char** values = nouveauTableauString();
+    char* code = decoder(data, values);
+    afficherMessageRecu(code, values);
 
-  printf("Nom recu: %s\n", data);
- 
-  return 0;
+    return 0;
 }
 
 int envoie_de_calcul(int socketfd) {
-  char data[1024];
-  // la réinitialisation de l'ensemble des données
-  memset(data, 0, sizeof(data));
+    char data[1024];
+    // la réinitialisation de l'ensemble des données
+    memset(data, 0, sizeof(data));
 
 
-  // Demandez à l'utilisateur d'entrer son nom
-  char message[100];
-  printf("Votre calcul (max 1000 caracteres): ");
-  fgets(message, 1024, stdin);
-  strcpy(data, "calcul: ");
-  strcat(data, message);
+    // Demandez à l'utilisateur d'entrer son nom
+    char message[100];
+    printf("Votre calcul (max 1000 caracteres): ");
+    fgets(message, 1024, stdin);
+    strcpy(data, "calcul: ");
+    strcat(data, message);
 
-  encoderCommunication(data);
-  
-  int write_status = write(socketfd, data, strlen(data));
-  if ( write_status < 0 ) {
-    perror("erreur ecriture");
-    exit(EXIT_FAILURE);
-  }
+    encoder(data);
+    
+    int write_status = write(socketfd, data, strlen(data));
+    if ( write_status < 0 ) {
+        perror("erreur ecriture");
+        exit(EXIT_FAILURE);
+    }
 
-  // la réinitialisation de l'ensemble des données
-  memset(data, 0, sizeof(data));
+    // la réinitialisation de l'ensemble des données
+    memset(data, 0, sizeof(data));
 
-  // lire les données de la socket
-  int read_status = read(socketfd, data, sizeof(data));
-  if ( read_status < 0 ) {
-    perror("erreur lecture");
-    return -1;
-  }
+    // lire les données de la socket
+    int read_status = read(socketfd, data, sizeof(data));
+    if ( read_status < 0 ) {
+        perror("erreur lecture");
+        return -1;
+    }
 
-  decoderCommunication(data);
-
-  printf("Resultat recu: %s\n", data);
+    char** values = nouveauTableauString();
+    char* code = decoder(data, values);
+    afficherMessageRecu(code, values);
  
-  return 0;
+    return 0;
 }
 
 int envoie_couleurs(int socketfd, char *pathname) {
-  char data[1024];
-  memset(data, 0, sizeof(data));
-  strcpy(data, "couleurs: ");
-  analyse(pathname, data, 10); // récupère les couleurs de l'image
-  
-  int write_status = write(socketfd, data, strlen(data));
-  if ( write_status < 0 ) {
-    perror("erreur ecriture");
-    exit(EXIT_FAILURE);
-  }
+    char data[1024];
+    memset(data, 0, sizeof(data));
+    strcpy(data, "couleurs: ");
+    analyse(pathname, data, 10); // récupère les couleurs de l'image
+    
+    int write_status = write(socketfd, data, strlen(data));
+    if ( write_status < 0 ) {
+        perror("erreur ecriture");
+        exit(EXIT_FAILURE);
+    }
 
-  return 0;
+    return 0;
 }
 
 int envoie_balises(int socketfd) {
-  char data[1024];
-  // la réinitialisation de l'ensemble des données
-  memset(data, 0, sizeof(data));
+    char data[1024];
+    // la réinitialisation de l'ensemble des données
+    memset(data, 0, sizeof(data));
 
+    // Demandez à l'utilisateur d'entrer son nombre de balises et ses balises
+    char balises[1000];
+    printf("Vos balises (max 1000 caracteres): ");
+    fgets(balises, 1024, stdin);
+    sprintf(data, "balises: %s", balises);
+    
+    int write_status = write(socketfd, data, strlen(data));
+    if ( write_status < 0 ) {
+        perror("erreur ecriture");
+        exit(EXIT_FAILURE);
+    }
 
-  // Demandez à l'utilisateur d'entrer son nombre de balises et ses balises
-  char balises[1000];
-  printf("Vos balises (max 1000 caracteres): ");
-  fgets(balises, 1024, stdin);
-  sprintf(data, "balises: %s", balises);
-  
-  int write_status = write(socketfd, data, strlen(data));
-  if ( write_status < 0 ) {
-    perror("erreur ecriture");
-    exit(EXIT_FAILURE);
-  }
+    return 0;
 }
 
 int envoie_plot(int socketfd, char *pathname, int nb_colors) {
@@ -274,133 +316,62 @@ int envoie_plot(int socketfd, char *pathname, int nb_colors) {
     return 0;
 }
 
-char* read_until_delim(FILE* file, char delim) {
-    char* buffer = malloc(100);
-    for (int i = 0; 1; ++i) {
-        buffer[i] = fgetc(file);
+/* ===== MAIN ===== */
+int main(int argc, char **argv) {
+    int socketfd;
+    int bind_status;
 
-        if (buffer[i] == delim) {
-            buffer[i] = '\0';
-            return buffer;
-        }
-    }
-}
+    struct sockaddr_in server_addr, client_addr;
 
-int envoie_json(int socketfd, char *pathname) {
-    char buffer[1000];
-    FILE* json = fopen(pathname, "r");
-
-    for (int i = 0; 1; ++i) {
-        buffer[i] = fgetc(json);
-
-        if (buffer[i] == EOF) {
-            break;
-        }
-        else if (buffer[i] == '{') {
-            fgetc(json);
-            char* line = read_until_delim(json, '}');
-
-            // lecture jusqu'a code
-            strtok(line, ":");
-            strtok(NULL, "\"");
-            // récupération du code
-            char* code = strtok(NULL, "\"");
-            printf("code: %s\n", code);
-
-            // lecture des valeurs
-            char* values[100];
-
-            strtok(NULL, "[");
-            char* token = strtok(NULL, "]");
-            for (int j = 0; j <= strlen(token); ++j) {
-                if (token[j] == '"') {
-                    ++j;
-                    while (token[j] != '"') { // TODO À débuguer
-                        strncat(values[sizeof(values)/sizeof(values[0]) - 1], &token[j], 1);
-                        ++j;
-                    }
-                    printf("test: %s", values[sizeof(values)/sizeof(values[0]) - 1]);
-                    break;
-                }
-            }
-            printf("\n");
-        }
-    }
-
-    char data[1024];
-    memset(data, 0, sizeof(data));
-    strcpy(data, "json: ");
-
-    int write_status = write(socketfd, data, strlen(data));
-    if ( write_status < 0 ) {
-        perror("erreur ecriture");
+    /*
+     * Creation d'une socket
+     */
+    socketfd = socket(AF_INET, SOCK_STREAM, 0);
+    if ( socketfd < 0 ) {
+        perror("socket");
         exit(EXIT_FAILURE);
     }
 
-    return 0;
+    //détails du serveur (adresse et port)
+    memset(&server_addr, 0, sizeof(server_addr));
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_port = htons(PORT);
+    server_addr.sin_addr.s_addr = INADDR_ANY;
+
+    //demande de connection au serveur
+    int connect_status = connect(socketfd, (struct sockaddr *) &server_addr, sizeof(server_addr));
+    if ( connect_status < 0 ) {
+        perror("connection serveur");
+        exit(EXIT_FAILURE);
+    }
+
+
+    if (!strcmp(argv[1], "message")) {
+        envoie_recois_message(socketfd);
+    }
+    else if (!strcmp(argv[1], "nom")) {
+        envoie_nom_de_client(socketfd);
+    }
+    else if (!strcmp(argv[1], "calcul")) {
+        envoie_de_calcul(socketfd);
+    }
+    else if (!strcmp(argv[1], "couleurs")) {
+        envoie_couleurs(socketfd, argv[2]); // chemin de l'image en deuxième argument
+    }
+    else if (!strcmp(argv[1], "balises")) {
+        envoie_balises(socketfd);
+    }
+    else if (!strcmp(argv[1], "plot")) {
+            if (atoi(argv[3]) > 30) {
+                    perror("Nombre de couleurs doit etre inferieur a 30");
+                    exit(EXIT_FAILURE);
+            }
+            envoie_plot(socketfd, argv[2], atoi(argv[3])); // chemin de l'image en deuxième argument et nombre de couleurs pour le troisième argument
+    }
+    else {
+        perror("Mauvais argument");
+        exit(EXIT_FAILURE);
+    }
+
+    close(socketfd);
 }
-
-/* ===== MAIN ===== */
-int main(int argc, char **argv) {
-  int socketfd;
-  int bind_status;
-
-  struct sockaddr_in server_addr, client_addr;
-
-  /*
-   * Creation d'une socket
-   */
-  socketfd = socket(AF_INET, SOCK_STREAM, 0);
-  if ( socketfd < 0 ) {
-    perror("socket");
-    exit(EXIT_FAILURE);
-  }
-
-  //détails du serveur (adresse et port)
-  memset(&server_addr, 0, sizeof(server_addr));
-  server_addr.sin_family = AF_INET;
-  server_addr.sin_port = htons(PORT);
-  server_addr.sin_addr.s_addr = INADDR_ANY;
-
-  //demande de connection au serveur
-  int connect_status = connect(socketfd, (struct sockaddr *) &server_addr, sizeof(server_addr));
-  if ( connect_status < 0 ) {
-    perror("connection serveur");
-    exit(EXIT_FAILURE);
-  }
-
-
-  if (!strcmp(argv[1], "message")) {
-    envoie_recois_message(socketfd);
-  }
-  else if (!strcmp(argv[1], "nom")) {
-    envoie_nom_de_client(socketfd);
-  }
-  else if (!strcmp(argv[1], "calcul")) {
-    envoie_de_calcul(socketfd);
-  }
-  else if (!strcmp(argv[1], "couleurs")) {
-    envoie_couleurs(socketfd, argv[2]); // chemin de l'image en deuxième argument
-  }
-  else if (!strcmp(argv[1], "balises")) {
-    envoie_balises(socketfd);
-  }
-  else if (!strcmp(argv[1], "plot")) {
-      if (atoi(argv[3]) > 30) {
-          perror("Nombre de couleurs doit etre inferieur a 30");
-          exit(EXIT_FAILURE);
-      }
-      envoie_plot(socketfd, argv[2], atoi(argv[3])); // chemin de l'image en deuxième argument et nombre de couleurs pour le troisième argument
-  }
-  else if (!strcmp(argv[1], "json")) {
-      envoie_json(socketfd, argv[2]); // chemin du fichier "json" en deuxième argument
-  }
-  else {
-    perror("Mauvais argument");
-    exit(EXIT_FAILURE);
-  }
-
-  close(socketfd);
-}
-
-#pragma clang diagnostic pop
