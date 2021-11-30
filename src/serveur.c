@@ -13,6 +13,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <math.h>
+
 
 #include "serveur.h"
 
@@ -200,6 +202,57 @@ int renvoie_nom(int client_socket_fd, char *data) {
     }
 }
 
+double somme(double* array, int length)
+{
+    double sum = *array;
+    for (int i = 1; i < length; ++i)
+    {
+        sum += *(array + i);
+    } 
+    return sum;
+}
+
+double soustraction(double* array, int length)
+{
+    double soustract = *array;
+    for (int i = 1; i < length; ++i)
+    {
+        soustract -= *(array + i);
+    } 
+    return soustract;
+}
+
+double multiplication(double* array, int length)
+{
+    double multiple = *array;
+    for (int i = 1; i < length; ++i)
+    {
+        multiple *= *(array + i);
+    } 
+    return (double)(multiple);
+}
+
+double division(double* array, int length)
+{
+    double divide = *array;
+    for (int i = 1; i < length; ++i)
+    {
+        if(*(array + i)==0)
+       {
+           perror("division par zero");
+           return(EXIT_FAILURE);
+       } 
+        divide /= *(array + i);
+    } 
+    return (double)(divide);
+}
+
+double moyenne(double* array, int length)
+{
+    return somme(array,length)/length;
+}
+
+
 /*
  * renvoyer un resultat de calcul (*data) au client (client_socket_fd)
  */
@@ -207,26 +260,65 @@ int renvoie_calcul(int client_socket_fd, char *data) {
     // Récupération de l'opérateur et des nombres
     char* tmp = strtok(data, " ");
     char* operateur = strtok(NULL, " ");
-    double nombre1 = atof(strtok(NULL, " "));
-    double nombre2 = atof(strtok(NULL, "\n"));
+    double *numbers = malloc(sizeof(double)); 
+
+    int length = 0;
+    do
+    {
+        char* nextCharacter = strtok(NULL, " ");
+        if(!nextCharacter)
+            break;
+        else
+        { 
+            numbers = realloc(numbers,sizeof(double) * (length + 1));
+            numbers[length] = atof(nextCharacter);
+        }
+        length++;
+    }while(length<100);
 
     // calcul
     double resultat = 0;
     if (!strcmp(operateur, "+")) {
-        resultat = nombre1 + nombre2;
+        resultat = somme(numbers,length);
     }
     else if (!strcmp(operateur, "-")) {
-        resultat = nombre1 - nombre2;
+        resultat = soustraction(numbers,length);
     }
     else if (!strcmp(operateur, "*")) {
-        resultat = (double)(nombre1 * nombre2);
+        resultat = multiplication(numbers,length);
     }
     else if (!strcmp(operateur, "/")) {
-        if (nombre2 == 0) {
-            perror("division par zero");
-            return(EXIT_FAILURE);
-        }
-        resultat = (double)(nombre1 / nombre2);
+        resultat = division(numbers,length);
+    }
+    else if (!strcmp(operateur, "moyenne")) {
+        resultat = moyenne(numbers,length);
+    } 
+    else if (!strcmp(operateur, "minimum")) {
+        double minimum = numbers[0];
+        for(int i = 1; i < length; ++i)
+        {
+            if(minimum > numbers[i])
+                minimum = numbers[i]; 
+        } 
+        resultat = minimum;
+    }
+    else if (!strcmp(operateur, "maximum")) {
+        double maximum = numbers[0];
+        for(int i = 1; i < length; ++i)
+        {
+            if(maximum < numbers[i])
+                maximum = numbers[i]; 
+        } 
+        resultat = maximum;
+    }
+    else if (!strcmp(operateur, "ecart-type")) {
+        double moyenne_au_carre = 0;
+        for (int i = 0; i < length; ++i)
+        {
+            moyenne_au_carre += numbers[i] * numbers[i];
+        } 
+        moyenne_au_carre = moyenne_au_carre/length;
+        resultat = sqrt((moyenne_au_carre - moyenne(numbers,length) * moyenne(numbers,length)));
     }
 
     // préparation de la réponse
@@ -243,6 +335,8 @@ int renvoie_calcul(int client_socket_fd, char *data) {
         perror("erreur ecriture");
         return(EXIT_FAILURE);
     }
+
+    free(numbers);
 
     return 0;
 }
@@ -322,6 +416,7 @@ int recois_envoie(int socketfd) {
         renvoie_nom(client_socket_fd, data);
     }
     else if (strcmp(code, "calcul:") == 0) {
+        printf("Calcul:\n");
         renvoie_calcul(client_socket_fd, data);
     }
     else if (strcmp(code, "couleurs:") == 0) {
