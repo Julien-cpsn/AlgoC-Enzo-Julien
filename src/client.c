@@ -69,7 +69,7 @@ void analyse(char *pathname, char *data, int nb_colors) {
         strcat(data, temp_string);
     }
 
-    //enlever le dernier virgule
+    // enlever la dernière virgule
     data[strlen(data)-1] = '\0';
 }
 
@@ -116,9 +116,14 @@ void encoder(char* data){ //encode en JSON pour la communication client/serveur
     strcat(json,commande);
     strcat(json,"\", \"valeurs\": [");
     for(int i = 0; valeurs[i] != NULL && i < nombre_valeurs; ++i){
-        strcat(json,"\"");
+        if (strcmp(commande, "calcul") != 0 || i == 0) {
+            strcat(json, "\"");
+        }
         strcat(json,valeurs[i]);
-        strcat(json,"\"");
+        if (strcmp(commande, "calcul") != 0 || i == 0) {
+            strcat(json, "\"");
+        }
+
         if(valeurs[i+1] != NULL){
             strcat(json,", ");
         }
@@ -171,13 +176,13 @@ int envoie_recois_message(int socketfd) {
 
     // Demandez à l'utilisateur d'entrer un message
     char message[100];
-    printf("Votre message (max 1000 caracteres): ");
+    printf("Votre message (max 1000 caracteres) : ");
     if (fgets(message, sizeof(message), stdin) == NULL) {
         fprintf(stderr, "Error reading.\n");
         exit(1);
     }
     message[strcspn(message, "\r\n")] = 0;
-    strcpy(data, "message: ");
+    strcpy(data, "message:");
     strcat(data, message);
 
     encoder(data);
@@ -220,7 +225,7 @@ int envoie_nom_de_client(int socketfd) {
         exit(1);
     }
     message[strcspn(message, "\r\n")] = 0;
-    strcpy(data, "nom: ");
+    strcpy(data, "nom:");
     strcat(data, message);
 
     encoder(data);

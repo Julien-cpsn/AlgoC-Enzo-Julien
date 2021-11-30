@@ -127,9 +127,13 @@ void encoder(char* data){
     strcat(json,commande);
     strcat(json,"\", \"valeurs\": [");
     for(int i = 0; valeurs[i] != NULL && i < nombre_valeurs; ++i) {
-        strcat(json,"\"");
+        if (strcmp(commande, "calcul") != 0 || i == 0) {
+            strcat(json, "\"");
+        }
         strcat(json,valeurs[i]);
-        strcat(json,"\"");
+        if (strcmp(commande, "calcul") != 0 || i == 0) {
+            strcat(json, "\"");
+        }
 
         if(valeurs[i+1] != NULL){
             strcat(json,", ");
@@ -155,17 +159,40 @@ char* decoder(char* message, char* data) {
     strcpy(data, code);
     strcat(data, " ");
 
-
     strtok(NULL, "[");
     char* token = strtok(NULL, "]");
-    for (int i = 0; i <= strlen(token); ++i) {
-        if (token[i] == '"') {
-            ++i;
-            while (token[i] != '"') {
-                strncat(data, &token[i], 1);
+
+    if (strcmp(code, "calcul:") == 0) {
+        for (int i = 0; i <= strlen(token); ++i) {
+            if (token[i] == '"') {
                 ++i;
+                while (token[i] != '"') {
+                    strncat(data, &token[i], 1);
+                    ++i;
+                }
+                strcat(data, " ");
             }
-            strcat(data, " ");
+            else if (token[i] == ',') {
+                i = i + 2;
+                while (i < strlen(token) && token[i] != ',') {
+                    strncat(data, &token[i], 1);
+                    ++i;
+                }
+                --i;
+                strcat(data, " ");
+            }
+        }
+    }
+    else {
+        for (int i = 0; i <= strlen(token); ++i) {
+            if (token[i] == '"') {
+                ++i;
+                while (token[i] != '"') {
+                    strncat(data, &token[i], 1);
+                    ++i;
+                }
+                strcat(data, " ");
+            }
         }
     }
 
@@ -208,7 +235,7 @@ double somme(double* array, int length)
     for (int i = 1; i < length; ++i)
     {
         sum += *(array + i);
-    } 
+    }
     return sum;
 }
 
@@ -218,7 +245,7 @@ double soustraction(double* array, int length)
     for (int i = 1; i < length; ++i)
     {
         soustract -= *(array + i);
-    } 
+    }
     return soustract;
 }
 
@@ -228,7 +255,7 @@ double multiplication(double* array, int length)
     for (int i = 1; i < length; ++i)
     {
         multiple *= *(array + i);
-    } 
+    }
     return (double)(multiple);
 }
 
@@ -241,9 +268,9 @@ double division(double* array, int length)
        {
            perror("division par zero");
            return(EXIT_FAILURE);
-       } 
+       }
         divide /= *(array + i);
-    } 
+    }
     return (double)(divide);
 }
 
@@ -260,7 +287,7 @@ int renvoie_calcul(int client_socket_fd, char *data) {
     // Récupération de l'opérateur et des nombres
     char* tmp = strtok(data, " ");
     char* operateur = strtok(NULL, " ");
-    double *numbers = malloc(sizeof(double)); 
+    double *numbers = malloc(sizeof(double));
 
     int length = 0;
     do
@@ -269,7 +296,7 @@ int renvoie_calcul(int client_socket_fd, char *data) {
         if(!nextCharacter)
             break;
         else
-        { 
+        {
             numbers = realloc(numbers,sizeof(double) * (length + 1));
             numbers[length] = atof(nextCharacter);
         }
@@ -292,14 +319,14 @@ int renvoie_calcul(int client_socket_fd, char *data) {
     }
     else if (!strcmp(operateur, "moyenne")) {
         resultat = moyenne(numbers,length);
-    } 
+    }
     else if (!strcmp(operateur, "minimum")) {
         double minimum = numbers[0];
         for(int i = 1; i < length; ++i)
         {
             if(minimum > numbers[i])
-                minimum = numbers[i]; 
-        } 
+                minimum = numbers[i];
+        }
         resultat = minimum;
     }
     else if (!strcmp(operateur, "maximum")) {
@@ -307,8 +334,8 @@ int renvoie_calcul(int client_socket_fd, char *data) {
         for(int i = 1; i < length; ++i)
         {
             if(maximum < numbers[i])
-                maximum = numbers[i]; 
-        } 
+                maximum = numbers[i];
+        }
         resultat = maximum;
     }
     else if (!strcmp(operateur, "ecart-type")) {
@@ -316,7 +343,7 @@ int renvoie_calcul(int client_socket_fd, char *data) {
         for (int i = 0; i < length; ++i)
         {
             moyenne_au_carre += numbers[i] * numbers[i];
-        } 
+        }
         moyenne_au_carre = moyenne_au_carre/length;
         resultat = sqrt((moyenne_au_carre - moyenne(numbers,length) * moyenne(numbers,length)));
     }
@@ -416,7 +443,6 @@ int recois_envoie(int socketfd) {
         renvoie_nom(client_socket_fd, data);
     }
     else if (strcmp(code, "calcul:") == 0) {
-        printf("Calcul:\n");
         renvoie_calcul(client_socket_fd, data);
     }
     else if (strcmp(code, "couleurs:") == 0) {
