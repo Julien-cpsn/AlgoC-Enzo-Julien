@@ -5,9 +5,7 @@
  *
  */
 
-#include <sys/types.h> 
 #include <sys/socket.h>
-#include <sys/epoll.h>
 #include <netinet/in.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,6 +13,7 @@
 #include <unistd.h>
 #include <math.h>
 
+#include "validator.c"
 
 #include "serveur.h"
 
@@ -148,7 +147,15 @@ void encoder(char* data){
 }
 
 char* decoder(char* message, char* data) {
-    // lecture jusqu'a code
+    char* temp = calloc(1000, 1);
+    memcpy(temp, message, 1000);
+
+    if(!validate(temp)) {
+        perror("JSON invalide");
+        exit(1);
+    }
+
+    // lecture jusqu'à code
     strtok(message, ":");
     strtok(NULL, "\"");
     // récupération du code

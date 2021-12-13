@@ -13,4 +13,5 @@ add_executable(Projet
         src/couleur.c
         src/couleur.h
         src/serveur.c
-        src/serveur.h)
+        src/serveur.h
+        src/validator.c)
