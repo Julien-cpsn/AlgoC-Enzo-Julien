@@ -150,7 +150,7 @@ char* decoder(char* message, char* data) {
     char* temp = calloc(1000, 1);
     memcpy(temp, message, 1000);
 
-    if(!validate(temp)) {
+    if(!validateJSON(temp)) {
         perror("JSON invalide");
         exit(1);
     }

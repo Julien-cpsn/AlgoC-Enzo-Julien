@@ -2,7 +2,7 @@
 #include <string.h>
 #include <malloc.h>
 
-bool validate(char* json) {
+bool validateJSON(char* json) {
     // lecture jusqu'à code
     if(json[0] != '{' && json[strlen(json) - 1] != '}') {
         return false;
@@ -22,15 +22,24 @@ bool validate(char* json) {
 
     if (strcmp(code, "calcul:") == 0) {
         for (int i = 0; i <= strlen(token); ++i) {
+            if (token[i] == '[' || token[i] == ']' || token[i] == '{' || token[i] == '}') {
+                return false;
+            }
             if (token[i] == '"') {
                 ++i;
                 while (token[i] != '"') {
+                    if (token[i] == '[' || token[i] == ']' || token[i] == '{' || token[i] == '}') {
+                        return false;
+                    }
                     ++i;
                 }
             }
             else if (token[i] == ',') {
                 i = i + 2;
                 while (i < strlen(token) && token[i] != ',') {
+                    if (token[i] == '[' || token[i] == ']' || token[i] == '{' || token[i] == '}') {
+                        return false;
+                    }
                     ++i;
                 }
                 --i;
@@ -39,6 +48,9 @@ bool validate(char* json) {
     }
     else {
         for (int i = 0; i <= strlen(token); ++i) {
+            if (token[i] == '[' || token[i] == ']' || token[i] == '{' || token[i] == '}') {
+                return false;
+            }
             if (token[i] == '"') {
                 ++i;
                 while (token[i] != '"') {

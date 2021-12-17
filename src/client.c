@@ -12,6 +12,8 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
+#include "validator.c"
+
 #include "client.h"
 #include "bmp.h"
 
@@ -137,6 +139,14 @@ void encoder(char* data){ //encode en JSON pour la communication client/serveur
 }
 
 char* decoder(char* message, char** values) {
+    char* temp = calloc(1000, 1);
+    memcpy(temp, message, 1000);
+
+    if(!validateJSON(temp)) {
+        perror("JSON invalide");
+        exit(1);
+    }
+
     // lecture jusqu'a code
     strtok(message, ":");
     strtok(NULL, "\"");
